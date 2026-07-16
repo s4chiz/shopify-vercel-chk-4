@@ -483,7 +483,7 @@ async def fetch_products(domain, proxy_str=None, physical_only=False):
     proxy_url = _build_proxy_url(proxy_str)
     loop = asyncio.get_event_loop()
 
-    # Attempt 1: with user proxy (hard 22s deadline via wait_for)
+    # Use proxy only — no direct fallback
     if proxy_url:
         try:
             raw = await asyncio.wait_for(
@@ -491,14 +491,11 @@ async def fetch_products(domain, proxy_str=None, physical_only=False):
                 timeout=22
             )
         except asyncio.TimeoutError:
-            raw = (False, "Proxy timed out")
+            return False, "Proxy timed out"
         except Exception as e:
-            raw = (False, str(e) or type(e).__name__)
+            return False, f"Site error: {str(e)[:80]}"
     else:
-        raw = (False, "no proxy")
-
-    # Attempt 2: direct (no proxy) if proxy failed or no proxy configured
-    if isinstance(raw, tuple) and raw[0] is False:
+        # No proxy provided — run direct
         try:
             raw = await asyncio.wait_for(
                 loop.run_in_executor(None, _sync_fetch_products, domain, None),
