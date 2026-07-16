@@ -438,6 +438,8 @@ def _sync_fetch_products(domain, proxy_url):
                 return False, "Site requires payment/password (402)"
             if r.status_code == 403:
                 return False, "Access denied (403)"
+            if r.status_code == 429:
+                return False, "RATE_LIMITED_429"
             if r.status_code != 200:
                 return False, f"Site error (HTTP {r.status_code})"
             text = r.text
