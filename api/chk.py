@@ -193,6 +193,9 @@ def chk():
     if not cc_raw:
         return Response("Error: missing 'cc' parameter (format: num|mm|yy|cvv)", status=400, mimetype="text/plain")
 
+    if not proxy:
+        return Response("Error: missing 'proxy' parameter — proxy is required", status=400, mimetype="text/plain")
+
     # Pick a random site from the hardcoded pool if none supplied
     if not site:
         site = "https://" + random.choice(SITES)
