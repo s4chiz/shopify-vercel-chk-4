@@ -452,8 +452,8 @@ def chk():
             message = str(e) or type(e).__name__
             break
 
-        # If rate-limited and we can rotate, pick a fresh site and retry
-        if message == "RATE_LIMITED_429" and not user_supplied_site:
+        # If rate-limited or all products too expensive, rotate to a fresh site
+        if message in ("RATE_LIMITED_429", "PRICE_TOO_HIGH") and not user_supplied_site:
             candidates = [s for s in SITES if "https://" + s not in _tried_sites]
             if candidates:
                 site = "https://" + random.choice(candidates)
