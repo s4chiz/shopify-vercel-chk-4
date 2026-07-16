@@ -407,6 +407,7 @@ def chk():
         return Response("Error: missing 'proxy' parameter — proxy is required", status=400, mimetype="text/plain")
 
     # Pick a random site from the hardcoded pool if none supplied
+    user_supplied_site = bool(site)
     if not site:
         site = "https://" + random.choice(SITES)
     elif not site.startswith("http"):
@@ -428,22 +429,37 @@ def chk():
     total_price = "0"
     currency = "USD"
 
-    try:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
+    # Auto-rotate to another site on 429 (rate-limited) — up to 3 attempts
+    _MAX_SITE_RETRIES = 3
+    _tried_sites = {site}
+    for _site_attempt in range(_MAX_SITE_RETRIES):
         try:
-            success, message, gateway, total_price, currency = loop.run_until_complete(
-                asyncio.wait_for(
-                    process_card(cc, mes, ano, cvv, site, proxy_str=proxy or None),
-                    timeout=55,
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                success, message, gateway, total_price, currency = loop.run_until_complete(
+                    asyncio.wait_for(
+                        process_card(cc, mes, ano, cvv, site, proxy_str=proxy or None),
+                        timeout=55,
+                    )
                 )
-            )
-        finally:
-            loop.close()
-    except asyncio.TimeoutError:
-        message = "TIMEOUT"
-    except Exception as e:
-        message = str(e) or type(e).__name__
+            finally:
+                loop.close()
+        except asyncio.TimeoutError:
+            message = "TIMEOUT"
+            break
+        except Exception as e:
+            message = str(e) or type(e).__name__
+            break
+
+        # If rate-limited and we can rotate, pick a fresh site and retry
+        if message == "RATE_LIMITED_429" and not user_supplied_site:
+            candidates = [s for s in SITES if "https://" + s not in _tried_sites]
+            if candidates:
+                site = "https://" + random.choice(candidates)
+                _tried_sites.add(site)
+                continue  # retry with new site
+        break  # success or non-retryable error
 
     elapsed = round(time.time() - t0, 2)
     clean_msg = extract_clean_response(message)
