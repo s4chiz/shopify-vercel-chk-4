@@ -544,7 +544,7 @@ async def fetch_products(domain, proxy_str=None, physical_only=False):
                 try:
                     price = variant.get('price', '0')
                     price = float(price.replace(',', '')) if isinstance(price, str) else float(price)
-                    if price <= 0:
+                    if price <= 0 or price > 8.0:
                         continue
                     ships = variant.get('requires_shipping') is not False
                     if physical_only and not ships:
@@ -571,7 +571,8 @@ async def fetch_products(domain, proxy_str=None, physical_only=False):
 
     if isinstance(min_product, dict) and min_product.get('variant_id'):
         return min_product
-    return False, "No valid products with price > 0"
+    # All products on this site are priced over $8 — signal caller to rotate
+    return False, "PRICE_TOO_HIGH"
 
 def extract_clean_response(message):
     if not message:
