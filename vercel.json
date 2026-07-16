@@ -1,0 +1,18 @@
+{
+  "version": 2,
+  "functions": {
+    "api/chk.py": {
+      "maxDuration": 60
+    }
+  },
+  "routes": [
+    {
+      "src": "/chk",
+      "dest": "/api/chk"
+    },
+    {
+      "src": "/",
+      "dest": "/api/chk"
+    }
+  ]
+}
